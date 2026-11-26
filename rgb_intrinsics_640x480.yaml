@@ -1,0 +1,21 @@
+# ESTIMATED intrinsics for the 640x480 RGB frames in episode_2.
+# Derived from rgb_intrinsics.yaml (calibrated at 1280x720), which is left unchanged.
+#
+# Assumed conversion: centre-crop 1280x720 to 960x720 (drop 160 px on the left and right),
+# then scale by 2/3 to get 640x480.
+#   fx, fy = original * 2/3
+#   cx     = (original cx - 160) * 2/3
+#   cy     = original cy * 2/3
+#   distortion coefficients: unchanged (they are relative to the focal length)
+#
+# Supported by drive data (image motion vs gyro rotation: ~1 px typical error), but NOT a real
+# calibration. The image centre (cx, cy) comes from the assumed crop and was not measured.
+# The distortion model stops being valid beyond ~353 px from (cx, cy), i.e. near the image corners.
+image_width: 640
+image_height: 480
+fx: 655.9330489612261
+fy: 655.9258697577723
+cx: 337.0928053837008
+cy: 253.54286338098012
+distortion_model: plumb_bob
+distortion_coeffs: [-0.74767028, 1.09045509, 0.00779917, 0.00198944, -1.16052267]
