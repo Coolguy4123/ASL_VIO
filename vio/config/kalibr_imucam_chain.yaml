@@ -1,0 +1,28 @@
+%YAML:1.0
+
+# Camera settings for OpenVINS (episode_2). THESE ARE ESTIMATES - see the notes below.
+cam0:
+  # How the camera is mounted relative to the IMU: first 3 columns = rotation (camera -> IMU),
+  # last column = where the camera sits in the IMU frame (metres).
+  #
+  # ASSUMED mounting: camera looks straight forward, IMU x = forward, y = left, z = up.
+  # (z = up is certain: gravity reads +z. The turning test also agrees: a left turn moves the scene
+  #  to the right in the image.) The camera position is UNKNOWN, so it starts at 0 and OpenVINS
+  # is allowed to adjust it (calib_cam_extrinsics: true in estimator_config.yaml).
+  T_imu_cam:
+    - [ 0.0,  0.0, 1.0, 0.0]
+    - [-1.0,  0.0, 0.0, 0.0]
+    - [ 0.0, -1.0, 0.0, 0.0]
+    - [ 0.0,  0.0, 0.0, 1.0]
+  cam_overlaps: []
+  camera_model: pinhole
+  # The images in vio/bags/*_undist were already corrected for lens distortion, so no distortion here.
+  distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
+  distortion_model: radtan
+  # fu, fv, cu, cv: from rgb_intrinsics_640x480.yaml (estimated from the 1280x720 calibration)
+  intrinsics: [655.9330489612261, 655.9258697577723, 337.0928053837008, 253.54286338098012]
+  resolution: [640, 480]
+  rostopic: /cam0/image_raw
+  # The image timestamps were already moved 0.425 s earlier when making the bag, so no shift here.
+  # OpenVINS may still refine it (calib_cam_timeoffset: true in estimator_config.yaml).
+  timeshift_cam_imu: 0.0
