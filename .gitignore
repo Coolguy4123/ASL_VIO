@@ -2,3 +2,5 @@ episode_2/
 .vscode/
 .venv/
 vio/bags/
+vio/ws/
+vio/results/
