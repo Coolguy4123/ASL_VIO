@@ -38,9 +38,11 @@ ros2 launch ov_msckf subscribe.launch.py \
     max_cameras:=1 use_stereo:=false verbosity:=INFO > "$OUT/openvins.log" 2>&1 &
 
 # 3) Save what OpenVINS publishes, so it can be replayed in RViz or Foxglove later:
-#    the pose and path, the 3D feature points, the image with tracked features, and the frames (/tf)
+#    the pose and path, the 3D feature points, the image with tracked features, the plain camera
+#    image, and the frames (/tf)
 ros2 bag record -o "$OUT/poses" /ov_msckf/poseimu /ov_msckf/pathimu /ov_msckf/odomimu \
-    /ov_msckf/points_msckf /ov_msckf/points_slam /ov_msckf/trackhist/compressed /tf /tf_static \
+    /ov_msckf/points_msckf /ov_msckf/points_slam /ov_msckf/trackhist/compressed \
+    /cam0/image_raw/compressed /tf /tf_static \
     > "$OUT/record.log" 2>&1 &
 
 sleep 5   # give the three programs a moment to start
