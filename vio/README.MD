@@ -2,56 +2,50 @@
 
 This folder runs **OpenVINS** on our recording `episode_2`: it reads the camera images and the IMU and estimates where the vehicle went. Every run is compared with the GNSS track automatically.
 
-**Status.** Not reliable yet. On `seg_c` (parked start, 122 s) the best setting gives a path 1.2 to 1.3 times too long and 2.5 to 4.8 m error against GNSS. The same setting **failed on `seg_d`** (another 2-minute piece, started at a 10 s stop): path 6.8 times too long. On the full `seg_a` drive it also fails.
+There are two runs and two bags, nothing else:
+
+| Run folder | Bag | Covers | Settings | Why |
+|---|---|---|---|---|
+| `seg_c_auto` | `seg_c_undist` | 427 to 590 s (parked for 40 s, then drives) | `default` | the most accurate test |
+| `seg_a_full_moving_start` | `seg_a_undist` | 30 to 590 s (the whole drive before the data hole, one piece) | `moving_start` | the whole drive |
+
+The two settings differ only in how OpenVINS starts: `default` assumes a standstill start, `moving_start` is for a vehicle that is already moving. The recording begins while moving, so the whole drive needs `moving_start`. Details in `config/openvins/README.md`.
 
 ## What is in here
 
 | Folder | What it holds |
 |---|---|
-| `config/` | `camera/` calibration, `openvins/` one settings folder per version |
+| `config/` | `camera/` calibration, `openvins/` the settings folders |
 | `scripts/` | make bags, run OpenVINS, compare with GNSS, check, fix scale |
-| `bags/` | the recordings OpenVINS plays |
-| `results/` | one folder per run, plus the GNSS ground truth |
+| `bags/` | `seg_c_undist`, `seg_a_undist` (lens distortion removed, image time moved by -0.425 s) |
+| `results/` | the two runs above, plus the GNSS ground truth |
 | `ws/` | OpenVINS itself (downloaded and built here) |
 
-Each folder has a small README of its own.
-
-## Which bag
-
-The IMU, GNSS and speed have a 232 s hole (591 to 823 s), so the recording is cut there. Use the `_undist` bags: lens distortion removed, image time moved by -0.425 s.
-
-| Bag | Covers | Use |
-|---|---|---|
-| `seg_c_undist` | 427 to 590 s | Parked for 40 s, then drives. **The best test**, about 3 minutes. |
-| `seg_d_undist` | 305 to 427 s | Starts at a 10 s stop. About 2 minutes. |
-| `seg_b_undist` | 823.5 to 980 s | Parked at the start, then mostly parked. Little movement. |
-| `seg_a_undist` | 30 to 590 s | Full drive, about 10 minutes. Starts while moving, which OpenVINS handles badly. |
-| `seg_a_short_undist` | 30 to 260 s | First part of it, for quick tests |
+Each folder has a small README of its own. The IMU, GNSS and speed have a 232 s hole (591 to 823 s), so nothing after 590 s is used.
 
 ## Run it
 
 From the project folder (`ASL_VIO`):
 
 ```bash
-# 0. find the standstills, good places to start (list of start, end, length in seconds)
-python3 vio/scripts/find_stops.py            # add a number to change the minimum length, e.g. 20
-
 # 1. make a bag for a time range (needs episode_2/unified.csv and imu_raw.csv from DataPreprocess.ipynb)
 #    change --start, --end (seconds) and --out; stay out of the data hole (591 to 823 s)
 source /opt/ros/humble/setup.bash
 python3 vio/scripts/make_bag.py --start 427 --end 590 --out vio/bags/seg_c_undist \
     --image-time-shift -0.425 --undistort-with vio/config/camera/rgb_intrinsics_640x480.yaml
 
-# 2. run OpenVINS (plays in real time; uses config/openvins/noise_0.03_0.002)
-vio/scripts/run_openvins.sh seg_c_undist
-#    other settings / own name / small files only (no Foxglove bag):
-CONFIG_DIR=vio/config/openvins/noise_0.05_0.003 OUT_NAME=my_test LIGHT=1 vio/scripts/run_openvins.sh seg_c_undist
+# 2. run OpenVINS (plays in real time)
+vio/scripts/run_openvins.sh seg_c_undist                                   # parked start: default settings
+CONFIG_DIR=vio/config/openvins/moving_start OUT_NAME=seg_a_full_moving_start \
+    vio/scripts/run_openvins.sh seg_a_undist                               # whole drive: moving start
+#    OUT_NAME = name of the results folder, LIGHT=1 = small files (no Foxglove bag)
 
 # 3. nothing printed here = nothing still running
 pgrep -af "[r]un_subscribe_msckf|[r]os2 (bag|launch|run)|[i]mage_transport/republish"
 
-# 4. optional: OpenVINS speed vs the logged speed (about 0.41 m/s), should be near 1
-python3 vio/scripts/check_run.py seg_c_undist
+# 4. optional: standstills (good places to start), and OpenVINS speed vs the logged speed
+python3 vio/scripts/find_stops.py
+python3 vio/scripts/check_run.py seg_c_auto
 ```
 
 ## What you get
@@ -65,7 +59,7 @@ When a run ends, `vio/results/<run>/` contains, automatically:
 | `foxglove/` | a bag with the OpenVINS path and the GNSS path together (not made with `LIGHT=1`) |
 | `openvins.log` | OpenVINS's own messages; read this first if something looks wrong |
 
-The OpenVINS path is only rotated and shifted onto GNSS, never stretched, so a wrong scale stays visible. For an older run: `python3 vio/scripts/plot_vs_gnss.py <run>` or `make_foxglove_bag.py <run>`.
+The OpenVINS path is only rotated and shifted onto GNSS, never stretched, so a wrong scale stays visible.
 
 **Foxglove:** open `vio/results/<run>/foxglove/foxglove_0.db3`.
 
@@ -79,36 +73,42 @@ Skip `poseimu` and `odomimu` in the 3D panel: their timestamps don't match `/tf`
 
 ## Results
 
-**Runs kept** (one per piece, all with the default settings `noise_0.03_0.002`, written out in `config/openvins/README.md`; error = RMS distance to GNSS):
+Error = RMS distance between the OpenVINS path and GNSS (rotated and shifted, not scaled).
 
-| Run folder | Piece | True path | OpenVINS path | Error | Verdict |
-|---|---|---|---|---|---|
-| `seg_c_auto` | 427 to 590 s (40 s stop, then drives) | 44 m | 57 m (1.28x) | 2.5 m | works, best run |
-| `seg_d_undist` | 305 to 427 s (10 s stop, then drives) | 48 m | 326 m (6.8x) | 73 m | **failed**, 4.7 to 7.4 times too fast from the start |
-| `seg_b_undist` | 823.5 to 980 s (mostly parked) | 8 m (GNSS jitter) | 6 m | 0.6 m | fine, but it barely moves |
+| Run | True path (GNSS) | OpenVINS path | Error | With one scale number |
+|---|---|---|---|---|
+| `seg_c_auto` | 44 m | 57 m (1.28x) | 2.5 m (worst 5.5 m) | 1.2 m |
+| `seg_a_full_moving_start` | 208 m | 418 m (2.0x) | 55.6 m (worst 126.8 m) | 5.2 m |
 
-So the good result did not carry over to `seg_d`. A possible reason is the short stop (10 s against 40 s), which gave a worse start-up (gyro bias guessed as -0.0023 in y, true value +0.0013). That is a guess, not tested.
+- **`seg_c_auto`** works well. Three runs of the same settings gave 54 to 59 m and 2.5 to 4.8 m.
+- **`seg_a_full_moving_start`** is stable for all 556 s (height stays within -5.9 and 5.3 m, 3422 of 3432 frames) and has the right shape and turn, but the path is about 2 times too long. It was 3.4 times too fast in the first minute and about 1 time in the last 100 s, probably because the stops and restarts give OpenVINS a little acceleration to learn the scale from (a guess, not tested).
+- After fixing the scale with one number, both are off by about 2.5 to 2.7% of the distance, so the shape is about equally good. The big difference is the scale.
 
-**Everything tried** (the other runs were deleted). The IMU noise setting matters most: it tells OpenVINS how much to trust the IMU, and the IMU here vibrates a lot.
+**Other tests (those runs were deleted, the numbers stay here):**
 
-| IMU noise (accel / gyro) | Settings folder | Path | Error |
+| Test | Result |
+|---|---|
+| Whole-drive start with `default` settings (30 to 260 s, vehicle already moving) | complete runaway: 26,039 m for a true 99 m |
+| Same part with `moving_start` | stable, 246 m for 99 m (2.5x) |
+| `default` on a piece that starts at a 10 s stop (305 to 427 s) | failed: 326 m for a true 48 m (6.8x); a possible reason is the short stop, not tested |
+| `default` on the parked end (823 to 980 s) | fine, but the vehicle barely moves |
+
+**IMU noise (accel / gyro), tried on `seg_c`.** It tells OpenVINS how much to trust the IMU, which vibrates a lot:
+
+| Noise | Settings folder | Path (true 44 m) | Error |
 |---|---|---|---|
-| 0.005 / 0.0004 (too low) | deleted (the first version) | 199 m | 31.8 m |
-| **0.03 / 0.002** (3 runs) | `noise_0.03_0.002` | 54 to 59 m | 2.5 to 4.8 m |
+| 0.005 / 0.0004 (too low) | deleted | 199 m | 31.8 m |
+| **0.03 / 0.002** (3 runs) | `default` | 54 to 59 m | 2.5 to 4.8 m |
 | 0.05 / 0.003 (3 runs) | `noise_0.05_0.003` | 63 to 65 m | 4.3 to 4.9 m |
 | 0.07 / 0.004 | deleted | 78 m | 9.2 m |
 | 0.1 / 0.005 (too high) | deleted | 544 m | 141 m |
-| 0.05 / 0.003 + mask + more corners | deleted | 520 m | 87 m |
 
-Runs of the same setting differ by about ±1 m, so 0.03 and 0.05 are not clearly different. To recreate a deleted setting, copy a folder and change the two noise lines in its `kalibr_imu_chain.yaml` (the last row also used a mask on the top of the image and a lower corner threshold). The deleted folders are still in git history.
-
-**`seg_a`, full drive (about 195 m):** OpenVINS as it is gave 5061 m. Fixing the scale with the logged speed gave 177 m and 1.5 m error, but that keeps only OpenVINS's heading, so it is not pure VIO (the gyro alone gives 1.6 m). The `seg_a` run folders were deleted to save space; to redo it, run `vio/scripts/run_openvins.sh seg_a_undist` (about 10 minutes), then `python3 vio/scripts/rescale_path.py seg_a_undist`.
+Runs of the same setting differ by about ±1 m, so 0.03 and 0.05 are not clearly different. To recreate a deleted setting, copy a folder and change the two noise lines in its `kalibr_imu_chain.yaml`. The deleted folders are still in git history.
 
 ## Known problems
 
 - **IMU noise setting:** too low and the path runs away, too high and the scale is lost.
-- **Start-up:** starting while the vehicle already moves gave a wrong start (speed 0, wrong gyro bias). Start from a standstill, and probably a long one: the 40 s stop worked, the 10 s stop failed.
-- **Not robust:** the best setting works on one piece (`seg_c`) and fails on another (`seg_d`).
-- **Scale:** the vehicle drives at a steady speed, so there is almost no acceleration to learn real-world scale from. This is probably why the path is still 1.2 to 1.3 times too long.
+- **Start-up:** `default` fails when the vehicle already moves at the start; `moving_start` is stable there but less accurate.
+- **Scale:** the vehicle drives at a steady speed, so there is almost no acceleration to learn real-world scale from.
 - **Camera numbers** are estimated, not calibrated.
 - **Data hole:** 591 to 823 s has only images.

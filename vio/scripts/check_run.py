@@ -3,7 +3,7 @@
 Check one OpenVINS run against the speed logged by the vehicle.
 
     source /opt/ros/humble/setup.bash
-    python3 vio/scripts/check_run.py seg_a_short_undist seg_c_highnoise        (several runs can be listed)
+    python3 vio/scripts/check_run.py seg_c_auto seg_a_full_moving_start        (several runs can be listed)
 
 For each run it prints, every 20 s: OpenVINS's speed, the logged speed, and how many times too
 fast OpenVINS is (ratio, should be about 1). A good run stays near 1 and keeps the height near 0.

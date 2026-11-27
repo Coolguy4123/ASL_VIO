@@ -12,7 +12,7 @@ to the OpenVINS path. We do NOT scale it, so a wrong OpenVINS scale stays visibl
 Steps:
     python3 vio/scripts/make_ground_truth.py                      (once: makes the GNSS csv)
     source /opt/ros/humble/setup.bash
-    python3 vio/scripts/make_foxglove_bag.py seg_c_highnoise
+    python3 vio/scripts/make_foxglove_bag.py seg_c_auto
 
 Output: vio/results/<run>/foxglove/   (open foxglove/foxglove_0.db3 in Foxglove)
 In the 3D panel (display frame "global") turn on /ov_msckf/pathimu and /ground_truth/path.

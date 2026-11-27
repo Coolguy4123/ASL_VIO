@@ -1,23 +1,18 @@
 # openvins
 
-Each folder is a full OpenVINS setting (`estimator_config.yaml` plus the IMU and camera files). They differ only in the IMU noise numbers (and `ground_corners`, see below). The noise number tells OpenVINS how much to trust the IMU: larger means trust it less.
+Each folder is a full OpenVINS setting (`estimator_config.yaml` plus the IMU and camera files). They differ only in a few lines. The IMU noise number tells OpenVINS how much to trust the IMU: larger means trust it less.
 
-Results on `seg_c` (true path 44 m, error = RMS distance to GNSS):
-
-| Folder | IMU noise (accel / gyro) | Result |
+| Folder | What is different | Result |
 |---|---|---|
-| `noise_0.03_0.002` | 0.03 / 0.002 | **Default.** 3 runs: path 54 to 59 m, error 2.5 to 4.8 m |
-| `high_imu_noise` | 0.05 / 0.003 | 3 runs: path 63 to 65 m, error 4.3 to 4.9 m |
-| `noise_0.07_0.004` | 0.07 / 0.004 | path 78 m, error 9.2 m |
-| `higher_imu_noise` | 0.1 / 0.005 | too high: path 544 m, error 141 m |
-| `baseline` | 0.005 / 0.0004 | too low: path 199 m, error 31.8 m |
-| `ground_corners` | 0.05 / 0.003 | plus a mask on the top of the image and a lower corner threshold: path 520 m, error 87 m |
+| `default` | IMU noise accel 0.03, gyro 0.002. Start from a standstill. | `seg_c` (parked for 40 s, then drives): 3 runs, path 54 to 59 m for a true 44 m, error 2.5 to 4.8 m. Fails when the vehicle already moves at the start. |
+| `moving_start` | `default` plus the start-up mode for a vehicle that already moves (`init_dyn_use: true`, `init_dyn_min_deg` 3, `init_imu_thresh` 0.3) | The whole drive before the data hole (`seg_a`, 556 s): stable, path 418 m for a true 208 m (2.0 times too long). |
+| `noise_0.05_0.003` | `default` with IMU noise accel 0.05, gyro 0.003 | `seg_c`: 3 runs, path 63 to 65 m, error 4.3 to 4.9 m |
 
-The good range is about 0.03 to 0.05; inside it the runs vary by about ±1 m, so there is no clear winner.
+Other noise values were tried and deleted: 0.005 / 0.0004 (too low, path 199 m), 0.07 / 0.004 (path 78 m) and 0.1 / 0.005 (too high, path 544 m). The good range is about 0.03 to 0.05. See `vio/README.MD` for the full table.
 
-Use another one with: `CONFIG_DIR=vio/config/openvins/baseline vio/scripts/run_openvins.sh ...`
+Use another one with: `CONFIG_DIR=vio/config/openvins/moving_start vio/scripts/run_openvins.sh ...`
 
-## The default (`noise_0.03_0.002`) in detail
+## The default in detail
 
 | Group | Setting |
 |---|---|
