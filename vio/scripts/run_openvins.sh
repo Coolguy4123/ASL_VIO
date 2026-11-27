@@ -5,7 +5,7 @@
 #   vio/scripts/run_openvins.sh seg_b_undist 0.5      (play at half speed, easier on the computer)
 #
 # Optional settings, put them in front of the command:
-#   CONFIG_DIR=vio/config/openvins/baseline   use another settings folder (default: high_imu_noise)
+#   CONFIG_DIR=vio/config/openvins/baseline   use another settings folder (default: noise_0.03_0.002, the best so far)
 #   OUT_NAME=my_test             save to vio/results/my_test instead of the bag's name
 #   LIGHT=1                      record only the pose (small files, for quick tests)
 # Example:  CONFIG_DIR=vio/config/openvins/baseline OUT_NAME=my_test LIGHT=1 vio/scripts/run_openvins.sh seg_a_short_undist 2.0
@@ -14,7 +14,7 @@
 set -e
 BAG_NAME="$1"
 RATE="${2:-1.0}"
-CONFIG_DIR="${CONFIG_DIR:-vio/config/openvins/high_imu_noise}"
+CONFIG_DIR="${CONFIG_DIR:-vio/config/openvins/noise_0.03_0.002}"
 OUT_NAME="${OUT_NAME:-$BAG_NAME}"
 [ -d "vio/bags/$BAG_NAME" ] || { echo "No bag vio/bags/$BAG_NAME"; exit 1; }
 

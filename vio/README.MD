@@ -2,7 +2,7 @@
 
 This folder runs **OpenVINS** (a visual-inertial odometry program) on our recording, `episode_2`. It reads the camera images and the IMU, and estimates where the vehicle went.
 
-Status: it works only partly. On the long `seg_a` drive OpenVINS gets the **scale wrong** and later drifts away. The best pure-VIO run is `seg_c` with the settings in `config/openvins/high_imu_noise` (path 1.5 times too long, 4.9 m error against GNSS over 2 minutes).
+Status: it works only partly. On the long `seg_a` drive OpenVINS gets the **scale wrong** and later drifts away. The best pure-VIO run is `seg_c` with the settings in `config/openvins/noise_0.03_0.002` (path 1.2 times too long, 2.9 m error against GNSS over 2 minutes).
 
 ## Folders
 
@@ -39,7 +39,7 @@ python3 vio/scripts/make_bag.py --start 427 --end 590 --out vio/bags/seg_c_undis
 
 **2. Run OpenVINS.** It plays the bag at normal speed, so it takes as long as the bag.
 ```bash
-vio/scripts/run_openvins.sh seg_c_undist          # uses config/openvins/high_imu_noise
+vio/scripts/run_openvins.sh seg_c_undist          # uses config/openvins/noise_0.03_0.002
 # other settings, different name for the results, small files:
 CONFIG_DIR=vio/config/openvins/baseline OUT_NAME=my_test LIGHT=1 vio/scripts/run_openvins.sh seg_c_undist
 ```
@@ -84,11 +84,14 @@ It writes `vio/results/seg_a_undist_corrected/trajectory.csv` and `plot.png`.
 
 ## Results so far
 
-`seg_c`, 122 s of driving, true path 44 m (GNSS). Each is one run.
+`seg_c`, 122 s of driving, true path 44 m (GNSS). The three `high_imu_noise` runs agree closely (they are repeats); the others are one run each.
 
 | Run (settings folder) | Path length | Error vs GNSS | Height drift |
 |---|---|---|---|
-| `high_imu_noise` | **65 m (1.5x)** | **4.9 m** | under 1 m |
+| `noise_0.03_0.002` | **54 m (1.2x)** | **2.9 m** | under 1 m |
+| `high_imu_noise` (0.05 / 0.003, 3 runs) | 63 to 65 m (1.4 to 1.5x) | 4.3 to 4.9 m | under 1 m |
+| `noise_0.07_0.004` | 78 m (1.8x) | 9.2 m | under 1 m |
+| `higher_imu_noise` (0.1 / 0.005) | 544 m (12x) | 141 m | up to 24 m |
 | `baseline` (IMU noise too low) | 199 m (4.5x) | 31.8 m | up to 22 m |
 | `ground_corners` | 520 m (11.7x) | 87.3 m | down to -48 m |
 
