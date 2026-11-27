@@ -44,7 +44,8 @@ All numbers are for episode 2.
 
 | | Path vs the real 44 m (GNSS) | Error vs GNSS |
 |---|---|---|
-| `seg_c`, best setting, 3 runs (parked start, 122 s) | 54 to 59 m | 2.5 to 4.8 m |
+| `seg_c`, best setting, 3 runs (40 s stop, then 122 s) | 54 to 59 m | 2.5 to 4.8 m |
+| `seg_d`, same setting (10 s stop, then 110 s) | 326 m instead of 48 m | 73 m, **failed** |
 | `seg_a`, full drive, OpenVINS as it is | 5061 m instead of about 195 m | runs away |
 | `seg_a`, scale fixed with the logged speed | 177 m | 1.5 m, but this is **not pure VIO** |
 

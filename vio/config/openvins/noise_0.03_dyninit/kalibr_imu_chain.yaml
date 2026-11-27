@@ -10,9 +10,9 @@ imu0:
     - [0.0, 1.0, 0.0, 0.0]
     - [0.0, 0.0, 1.0, 0.0]
     - [0.0, 0.0, 0.0, 1.0]
-  accelerometer_noise_density: 5.0e-3   # [ m / s^2 / sqrt(Hz) ]   measured 0.001 - 0.003, inflated
+  accelerometer_noise_density: 3.0e-2   # [ m / s^2 / sqrt(Hz) ]   measured 0.001 - 0.003, inflated
   accelerometer_random_walk: 3.0e-3     # [ m / s^3 / sqrt(Hz) ]   NOT measured (needs hours of still data): typical value
-  gyroscope_noise_density: 4.0e-4       # [ rad / s / sqrt(Hz) ]   measured ~0.0002, inflated
+  gyroscope_noise_density: 2.0e-3       # [ rad / s / sqrt(Hz) ]   measured ~0.0002, inflated
   gyroscope_random_walk: 2.0e-5         # [ rad / s^2 / sqrt(Hz) ] NOT measured: typical value
   rostopic: /imu0
   time_offset: 0.0

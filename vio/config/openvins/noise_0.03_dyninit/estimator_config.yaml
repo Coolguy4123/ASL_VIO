@@ -42,17 +42,17 @@ zupt_only_at_beginning: false
 # Start-up. We begin from a standstill (static init), so use the bags that start with the
 # vehicle stopped: seg_b_undist (still for its first ~25 s).
 init_window_time: 2.0
-init_imu_thresh: 1.5
+init_imu_thresh: 0.3
 init_max_disparity: 10.0
 init_max_features: 50
 
-init_dyn_use: false   # set true to start while already moving (needs the vehicle to turn at least ~10 degrees)
+init_dyn_use: true   # set true to start while already moving (needs the vehicle to turn at least ~10 degrees)
 init_dyn_mle_opt_calib: false
 init_dyn_mle_max_iter: 50
 init_dyn_mle_max_time: 0.05
 init_dyn_mle_max_threads: 4
 init_dyn_num_pose: 6
-init_dyn_min_deg: 10.0
+init_dyn_min_deg: 3.0
 
 init_dyn_inflation_ori: 10
 init_dyn_inflation_vel: 100

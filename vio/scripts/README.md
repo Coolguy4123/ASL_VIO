@@ -4,6 +4,7 @@ Run all of them from the project folder (`ASL_VIO`). Each file starts with a com
 
 | Script | What it does |
 |---|---|
+| `find_stops.py` | Lists the times the vehicle stood still: good places to start a run |
 | `make_bag.py` | CSV logs + images -> ROS 2 bag (fixes image time, removes lens distortion) |
 | `run_openvins.sh` | Plays a bag through OpenVINS, saves the results, **then runs the GNSS comparison automatically** (`plot_vs_gnss.py`, `make_foxglove_bag.py`) |
 | `plot_vs_gnss.py` | Picture (`vs_gnss.png`) and numbers (`metrics.txt`): OpenVINS path vs GNSS, and the error over time |
