@@ -2,7 +2,7 @@
 
 This folder runs **OpenVINS** (a visual-inertial odometry program) on our recording, `episode_2`. It reads the camera images and the IMU, and estimates where the vehicle went.
 
-Status: it works only partly. On the long `seg_a` drive OpenVINS gets the **scale wrong** and later drifts away. The best pure-VIO run is `seg_c` with the settings in `config/openvins/noise_0.03_0.002` (path 1.2 times too long, 2.9 m error against GNSS over 2 minutes).
+Status: it works only partly. On the long `seg_a` drive OpenVINS gets the **scale wrong** and later drifts away. The best pure-VIO runs are `seg_c` with the settings in `config/openvins/noise_0.03_0.002` (three runs: path 1.2 to 1.3 times too long, 2.5 to 4.8 m error against GNSS over 2 minutes).
 
 ## Folders
 
@@ -43,6 +43,15 @@ vio/scripts/run_openvins.sh seg_c_undist          # uses config/openvins/noise_0
 # other settings, different name for the results, small files:
 CONFIG_DIR=vio/config/openvins/baseline OUT_NAME=my_test LIGHT=1 vio/scripts/run_openvins.sh seg_c_undist
 ```
+When it ends, the run is **compared with the GNSS ground truth automatically**. In `vio/results/<run>/`:
+
+| File | What it is |
+|---|---|
+| `vs_gnss.png` | OpenVINS path vs GNSS (left), and the distance between them over time (right) |
+| `metrics.txt` | The same numbers as text: path lengths, average/RMS/worst error, best scale factor |
+| `foxglove/` | A bag with the OpenVINS path and the GNSS path together (not made with `LIGHT=1`) |
+
+The OpenVINS path is only rotated and shifted onto the GNSS track, never stretched, so a wrong scale stays visible.
 
 **3. Check it finished.** Nothing printed means nothing is running.
 ```bash
@@ -61,20 +70,16 @@ python3 vio/scripts/check_run.py seg_c_undist
   source /opt/ros/humble/setup.bash
   rviz2 -d vio/ws/src/open_vins/ov_msckf/launch/display_ros2.rviz
   ```
-- Afterwards in Foxglove, open `vio/results/<run>/poses/poses_0.db3` and add panels:
+- Afterwards in Foxglove, open `vio/results/<run>/foxglove/foxglove_0.db3` (it already contains the GNSS ground truth) and add panels:
 
 | Panel | Topic |
 |---|---|
 | Image (plain camera) | `/cam0/image_raw/compressed` |
 | Image (tracked corners) | `/ov_msckf/trackhist/compressed` |
-| 3D, display frame `global` | `/ov_msckf/pathimu`, `/ov_msckf/points_msckf`, `/ov_msckf/points_slam` (skip `poseimu` and `odomimu`: their timestamps don't match `/tf`) |
+| 3D, display frame `global` | `/ov_msckf/pathimu` (VIO path), `/ground_truth/path` (GNSS path), `/ov_msckf/points_msckf`, `/ov_msckf/points_slam` (skip `poseimu` and `odomimu`: their timestamps don't match `/tf`) |
 
-- To see the VIO path **and the ground truth** together:
-  ```bash
-  python3 vio/scripts/make_ground_truth.py                  # once
-  python3 vio/scripts/make_foxglove_bag.py seg_c_highnoise  # needs a run saved without LIGHT=1
-  ```
-  Then open `vio/results/seg_c_highnoise/foxglove/foxglove_0.db3` and turn on `/ov_msckf/pathimu` and `/ground_truth/path` in the 3D panel.
+- For an older run that has no `foxglove/` folder (and was not made with `LIGHT=1`):
+  `python3 vio/scripts/make_foxglove_bag.py <run>`. For the picture and numbers only: `python3 vio/scripts/plot_vs_gnss.py <run>`.
 
 **6. Fix the scale (not pure VIO).** Keeps only OpenVINS's heading and moves at the logged speed:
 ```bash
@@ -84,11 +89,19 @@ It writes `vio/results/seg_a_undist_corrected/trajectory.csv` and `plot.png`.
 
 ## Results so far
 
-`seg_c`, 122 s of driving, true path 44 m (GNSS). The three `high_imu_noise` runs agree closely (they are repeats); the others are one run each.
+**Runs kept** (`vio/results/`), `seg_c`, 122 s of driving, true path 44 m (GNSS). Error = RMS distance to GNSS.
 
-| Run (settings folder) | Path length | Error vs GNSS | Height drift |
+| Rank | Run folder | Settings | Path length | Error | Foxglove bag |
+|---|---|---|---|---|---|
+| 1 | `seg_c_auto` | `noise_0.03_0.002` | 57 m (1.28x) | 2.5 m | yes |
+| 2 | `seg_c_noise_0.03` | `noise_0.03_0.002` | 54 m (1.22x) | 2.9 m | no (pose only) |
+| 3 | `seg_c_highnoise_run2` | `high_imu_noise` | 63 m (1.42x) | 4.3 m | no (pose only) |
+
+**All settings tried** (the other runs were deleted, the numbers stay here). Several runs agree within about ±1 m.
+
+| Settings folder | Path length | Error vs GNSS | Height drift |
 |---|---|---|---|
-| `noise_0.03_0.002` | **54 m (1.2x)** | **2.9 m** | under 1 m |
+| `noise_0.03_0.002` (0.03 / 0.002, 3 runs) | **54 to 59 m (1.2 to 1.3x)** | **2.5 to 4.8 m** | under 1 m |
 | `high_imu_noise` (0.05 / 0.003, 3 runs) | 63 to 65 m (1.4 to 1.5x) | 4.3 to 4.9 m | under 1 m |
 | `noise_0.07_0.004` | 78 m (1.8x) | 9.2 m | under 1 m |
 | `higher_imu_noise` (0.1 / 0.005) | 544 m (12x) | 141 m | up to 24 m |

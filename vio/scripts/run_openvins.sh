@@ -7,10 +7,14 @@
 # Optional settings, put them in front of the command:
 #   CONFIG_DIR=vio/config/openvins/baseline   use another settings folder (default: noise_0.03_0.002, the best so far)
 #   OUT_NAME=my_test             save to vio/results/my_test instead of the bag's name
-#   LIGHT=1                      record only the pose (small files, for quick tests)
+#   LIGHT=1                      record only the pose (small files, for quick tests; no Foxglove bag)
 # Example:  CONFIG_DIR=vio/config/openvins/baseline OUT_NAME=my_test LIGHT=1 vio/scripts/run_openvins.sh seg_a_short_undist 2.0
 #
-# Run it from the project folder (ASL_VIO). Output: vio/results/<bag name>/
+# Run it from the project folder (ASL_VIO). Output: vio/results/<run name>/
+# When OpenVINS has finished, the result is AUTOMATICALLY compared with the GNSS ground truth:
+#   vs_gnss.png          OpenVINS path vs GNSS, and the error over time
+#   metrics.txt          the same numbers as text
+#   foxglove/            a bag with the OpenVINS path and the GNSS path together (not with LIGHT=1)
 set -e
 BAG_NAME="$1"
 RATE="${2:-1.0}"
@@ -23,7 +27,7 @@ source vio/ws/install/setup.bash
 
 OUT="vio/results/$OUT_NAME"
 mkdir -p "$OUT"
-rm -rf "$OUT/poses"      # ros2 bag record refuses to write into an existing folder
+rm -rf "$OUT/poses" "$OUT/foxglove"      # old results of the same name; ros2 bag record refuses to write into an existing folder
 
 # Stop everything we started when this script ends (or when you press Ctrl+C).
 # The first line stops the launcher programs; the next two stop the programs they started
@@ -55,6 +59,7 @@ else
 /ov_msckf/points_slam /ov_msckf/trackhist/compressed /cam0/image_raw/compressed /tf /tf_static"
 fi
 ros2 bag record -o "$OUT/poses" $TOPICS > "$OUT/record.log" 2>&1 &
+RECORD_PID=$!
 
 sleep 5   # give the three programs a moment to start
 
@@ -62,4 +67,15 @@ sleep 5   # give the three programs a moment to start
 ros2 bag play "vio/bags/$BAG_NAME" --rate "$RATE"
 
 sleep 3
-echo "Done. Logs and poses are in $OUT"
+# Stop the recorder and wait until the saved bag is complete (we read it in the next step)
+kill -INT $RECORD_PID 2>/dev/null || true
+wait $RECORD_PID 2>/dev/null || true
+
+# 5) Compare with the GNSS ground truth, automatically
+[ -f vio/results/ground_truth_gnss.csv ] || python3 vio/scripts/make_ground_truth.py
+python3 vio/scripts/plot_vs_gnss.py "$OUT_NAME" || echo "(comparison with GNSS failed, see the message above)"
+if [ "$LIGHT" != "1" ]; then
+    python3 vio/scripts/make_foxglove_bag.py "$OUT_NAME" || echo "(Foxglove bag failed, see the message above)"
+fi
+
+echo "Done. Logs, poses and the GNSS comparison are in $OUT"
