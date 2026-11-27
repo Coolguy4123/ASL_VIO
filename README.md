@@ -1,69 +1,51 @@
 # Cal Poly Pomona Autonomous System Lab - MARVIN VIO
 Freeman Y
 
+We try to estimate where the MARVIN vehicle drove using only its camera and IMU (visual-inertial odometry, VIO), with OpenVINS. Everything is based on one recording, `episode_2`.
+
 # Notes
-- Everything is based on episode 2
-- Need to recalibrate cameras to 680x480 pixel
-- Download OpenVINS
-- Raw IMU data is converted from csv to ROS bags
+- Everything is based on episode 2.
+- The camera numbers are an **estimate**: the calibration was made at 1280x720, but the frames are 640x480. A real calibration at 640x480 is still needed.
+- OpenVINS is installed in `vio/ws` (ROS 2 Humble).
+- Raw IMU data is converted from csv to ROS bags (`vio/scripts/make_bag.py`).
+
+# Folders
+| Folder | What it is |
+|---|---|
+| `DataPreprocess.ipynb` | Analysis of the recording (steps below) |
+| `episode_2/` | The raw recording (not in git) |
+| `vio/` | Everything for running OpenVINS: scripts, settings, results. Start with [vio/README.MD](vio/README.MD) |
+| `docs/` | Reference documents |
 
 DataPreprocess does the following
 1. Get the csv paths
 2. Analyze the dataset
-3. IMU Noise Analysis
-4. Time Synchronization
+3. IMU noise analysis
+4. Time synchronization
 5. Combine into one unified csv
 
 # Results
-All values are for episode 2. More detail and how to run: [vio/README.MD](vio/README.MD).
+All numbers are for episode 2.
 
-**Recording**
+**The recording.** 979 s long. IMU 100 Hz, GNSS 4 Hz, camera 5 to 10 Hz (5,742 frames). From 591 s to 823 s the IMU, GNSS and speed are missing and only images exist, so the recording is cut there.
 
-| Item | Value |
-|---|---|
-| Duration | 979 s |
-| IMU rate | 100 Hz |
-| GNSS rate | 4 Hz |
-| Camera rate | 5 to 10 Hz (frames 100 or 200 ms apart) |
-| Camera frames | 5,742 (640x480) |
-| Missing IMU, GNSS, speed | 591 to 823 s (232 s) |
-
-**IMU (measured while parked, 60 s)**
+**What we measured**
 
 | Item | Value |
 |---|---|
-| Gyro bias x, y, z | -0.0003, 0.0013, -0.0001 rad/s |
-| Gyro noise (std) x, y, z | 0.0022, 0.0025, 0.0018 rad/s |
-| Gyro noise density | 0.0002 rad/s/√Hz |
-| Accel offset x, y, z | 0.196, 0.301, 9.788 m/s² |
-| Accel noise (std) x, y, z | 0.020, 0.025, 0.029 m/s² |
-| Accel noise density | 0.002 to 0.003 m/s²/√Hz |
-| Gravity measured | 9.794 m/s² |
-| Vibration while driving (std) | gyro 0.054 rad/s, accel 1.08 m/s² |
+| Gyro bias (parked), x y z | -0.0003, 0.0013, -0.0001 rad/s |
+| Gyro and accel noise (parked) | gyro about 0.002 rad/s, accel 0.02 to 0.03 m/s² |
+| Accel x and y offsets | 0.2 and 0.3 m/s²: the vehicle's tilt (1 to 2 degrees), not sensor drift |
+| Vibration while driving | accel 1.1 m/s², gyro 0.054 rad/s (about 10 times the real acceleration) |
+| Image timestamps | **0.425 s late**; speed and yaw rate are 0.15 s behind the IMU |
+| Camera (estimate) | fx = fy = 656 px, cx = 337, cy = 254 |
 
-**Time sync**
+**VIO results**
 
-| Item | Value |
-|---|---|
-| Image timestamp offset | -0.425 s (images stamped 0.425 s late) |
-| Speed / yaw rate lag behind IMU | +0.15 s |
-| Offset left after correction (OpenVINS) | 0.0008 s |
-
-**Camera (640x480, estimated from the 1280x720 calibration)**
-
-| Item | Estimate | OpenVINS result (seg_b) |
+| | Path vs the real 44 m (GNSS) | Error vs GNSS |
 |---|---|---|
-| fx, fy | 655.9, 655.9 px | 657.3, 656.1 px |
-| cx, cy | 337.1, 253.5 px | 336.6, 253.2 px |
-| Distortion k1, k2, p1, p2, k3 | -0.7477, 1.0905, 0.0078, 0.0020, -1.1605 | removed from images |
+| `seg_c`, best setting, 3 runs (parked start, 122 s) | 54 to 59 m | 2.5 to 4.8 m |
+| `seg_a`, full drive, OpenVINS as it is | 5061 m instead of about 195 m | runs away |
+| `seg_a`, scale fixed with the logged speed | 177 m | 1.5 m, but this is **not pure VIO** |
 
-**OpenVINS**
-
-| Item | seg_b_undist | seg_a_undist |
-|---|---|---|
-| Frames processed | 938 / 940 | 3411 / 3432 |
-| Gyro bias x, y, z (rad/s) | -0.0002, 0.0013, -0.0001 | 0.0000, 0.0014, 0.0001 |
-| Accel bias x, y, z (m/s²) | 0.0007, -0.0092, -0.0159 | 0.078, 0.063, -0.016 |
-| Distance travelled | 2.6 m | 3604 m (at most 230 m possible) |
-| Drift while parked | 0.02 m | 29 m |
-| Result | works | wrong (diverges after about 205 s) |
+In short: pure VIO works over a couple of minutes if it starts from a standstill and the IMU noise setting is right, but the path stays about 1.2 to 1.3 times too long. On the long drive it fails. The causes we found: the IMU noise setting (too low runs away, too high loses the scale), a bad start-up while already moving, and a vehicle that drives at steady speed with almost no acceleration to measure scale from. GNSS (our ground truth) is ordinary GPS, about 2 to 3 m accurate.

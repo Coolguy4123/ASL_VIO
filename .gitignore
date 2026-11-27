@@ -4,3 +4,7 @@ episode_2/
 vio/bags/
 vio/ws/
 vio/results/
+
+# Python cache
+__pycache__/
+*.pyc

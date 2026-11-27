@@ -1,128 +1,105 @@
 # How to run
 
-This folder runs **OpenVINS** (a visual-inertial odometry program) on our recording, `episode_2`. It reads the camera images and the IMU, and estimates where the vehicle went.
+This folder runs **OpenVINS** on our recording `episode_2`: it reads the camera images and the IMU and estimates where the vehicle went. Every run is compared with the GNSS track automatically.
 
-Status: it works only partly. On the long `seg_a` drive OpenVINS gets the **scale wrong** and later drifts away. The best pure-VIO runs are `seg_c` with the settings in `config/openvins/noise_0.03_0.002` (three runs: path 1.2 to 1.3 times too long, 2.5 to 4.8 m error against GNSS over 2 minutes).
+**Status.** It works over a couple of minutes, not over the whole drive. On `seg_c` (parked start, 122 s) the best setting gives a path 1.2 to 1.3 times too long and 2.5 to 4.8 m error against GNSS. On the full `seg_a` drive it fails.
 
-## Folders
+## What is in here
 
-| Folder | What is in it |
+| Folder | What it holds |
 |---|---|
-| `config/` | Settings: `camera/` (calibration), `openvins/` (OpenVINS settings, one folder per version) |
-| `scripts/` | All the scripts (make bags, run OpenVINS, check, ground truth, fix scale) |
-| `bags/` | The recordings OpenVINS plays |
-| `results/` | One folder per run, plus the ground truth |
+| `config/` | `camera/` calibration, `openvins/` one settings folder per version |
+| `scripts/` | make bags, run OpenVINS, compare with GNSS, check, fix scale |
+| `bags/` | the recordings OpenVINS plays |
+| `results/` | one folder per run, plus the GNSS ground truth |
 | `ws/` | OpenVINS itself (downloaded and built here) |
 
-Every folder has its own small README.
+Each folder has a small README of its own.
 
-## Which bag to use
+## Which bag
 
-The IMU, GNSS and speed have a **232 s hole (591 to 823 s)**, so the recording is cut there. Always use the `_undist` bags (lens distortion removed, image time moved by -0.425 s).
+The IMU, GNSS and speed have a 232 s hole (591 to 823 s), so the recording is cut there. Use the `_undist` bags: lens distortion removed, image time moved by -0.425 s.
 
 | Bag | Covers | Use |
 |---|---|---|
-| `seg_a_undist` | 30 to 590 s | The long drive. About 10 minutes to run. Starts while moving, which is hard. |
+| `seg_c_undist` | 427 to 590 s | Parked for 40 s, then drives. **The best test**, about 3 minutes. |
+| `seg_a_undist` | 30 to 590 s | Full drive, about 10 minutes. Starts while moving, which OpenVINS handles badly. |
 | `seg_a_short_undist` | 30 to 260 s | First part of it, for quick tests |
-| `seg_c_undist` | 427 to 590 s | Parked for 40 s, then drives. The best test. About 3 minutes. |
 
-## Steps
+## Run it
 
-Run everything from the project folder (`ASL_VIO`).
+From the project folder (`ASL_VIO`):
 
-**1. Make a bag (once).** Needs `episode_2/imu_raw.csv` and `episode_2/unified.csv`, which `DataPreprocess.ipynb` creates.
 ```bash
+# 1. make a bag (once; needs episode_2/unified.csv and imu_raw.csv from DataPreprocess.ipynb)
 source /opt/ros/humble/setup.bash
 python3 vio/scripts/make_bag.py --start 427 --end 590 --out vio/bags/seg_c_undist \
     --image-time-shift -0.425 --undistort-with vio/config/camera/rgb_intrinsics_640x480.yaml
-```
 
-**2. Run OpenVINS.** It plays the bag at normal speed, so it takes as long as the bag.
-```bash
-vio/scripts/run_openvins.sh seg_c_undist          # uses config/openvins/noise_0.03_0.002
-# other settings, different name for the results, small files:
+# 2. run OpenVINS (plays in real time; uses config/openvins/noise_0.03_0.002)
+vio/scripts/run_openvins.sh seg_c_undist
+#    other settings / own name / small files only (no Foxglove bag):
 CONFIG_DIR=vio/config/openvins/baseline OUT_NAME=my_test LIGHT=1 vio/scripts/run_openvins.sh seg_c_undist
-```
-When it ends, the run is **compared with the GNSS ground truth automatically**. In `vio/results/<run>/`:
 
-| File | What it is |
-|---|---|
-| `vs_gnss.png` | OpenVINS path vs GNSS (left), and the distance between them over time (right) |
-| `metrics.txt` | The same numbers as text: path lengths, average/RMS/worst error, best scale factor |
-| `foxglove/` | A bag with the OpenVINS path and the GNSS path together (not made with `LIGHT=1`) |
-
-The OpenVINS path is only rotated and shifted onto the GNSS track, never stretched, so a wrong scale stays visible.
-
-**3. Check it finished.** Nothing printed means nothing is running.
-```bash
+# 3. nothing printed here = nothing still running
 pgrep -af "[r]un_subscribe_msckf|[r]os2 (bag|launch|run)|[i]mage_transport/republish"
-```
 
-**4. Check the result.** Compares OpenVINS's speed with the logged speed (about 0.41 m/s). A good run has a ratio near 1 and a height near 0.
-```bash
-source /opt/ros/humble/setup.bash
+# 4. optional: OpenVINS speed vs the logged speed (about 0.41 m/s), should be near 1
 python3 vio/scripts/check_run.py seg_c_undist
 ```
 
-**5. Look at it.**
-- Live in RViz (start it first, then run step 2):
-  ```bash
-  source /opt/ros/humble/setup.bash
-  rviz2 -d vio/ws/src/open_vins/ov_msckf/launch/display_ros2.rviz
-  ```
-- Afterwards in Foxglove, open `vio/results/<run>/foxglove/foxglove_0.db3` (it already contains the GNSS ground truth) and add panels:
+## What you get
+
+When a run ends, `vio/results/<run>/` contains, automatically:
+
+| File | What it is |
+|---|---|
+| `vs_gnss.png` | OpenVINS path vs GNSS (left) and the distance between them over time (right) |
+| `metrics.txt` | the same as numbers: path lengths, average / RMS / worst error, best scale factor |
+| `foxglove/` | a bag with the OpenVINS path and the GNSS path together (not made with `LIGHT=1`) |
+| `openvins.log` | OpenVINS's own messages; read this first if something looks wrong |
+
+The OpenVINS path is only rotated and shifted onto GNSS, never stretched, so a wrong scale stays visible. For an older run: `python3 vio/scripts/plot_vs_gnss.py <run>` or `make_foxglove_bag.py <run>`.
+
+**Foxglove:** open `vio/results/<run>/foxglove/foxglove_0.db3`.
 
 | Panel | Topic |
 |---|---|
-| Image (plain camera) | `/cam0/image_raw/compressed` |
-| Image (tracked corners) | `/ov_msckf/trackhist/compressed` |
-| 3D, display frame `global` | `/ov_msckf/pathimu` (VIO path), `/ground_truth/path` (GNSS path), `/ov_msckf/points_msckf`, `/ov_msckf/points_slam` (skip `poseimu` and `odomimu`: their timestamps don't match `/tf`) |
+| Image, plain camera | `/cam0/image_raw/compressed` |
+| Image, tracked corners | `/ov_msckf/trackhist/compressed` |
+| 3D, display frame `global` | `/ov_msckf/pathimu` (VIO), `/ground_truth/path` (GNSS), `/ov_msckf/points_msckf`, `/ov_msckf/points_slam` |
 
-- For an older run that has no `foxglove/` folder (and was not made with `LIGHT=1`):
-  `python3 vio/scripts/make_foxglove_bag.py <run>`. For the picture and numbers only: `python3 vio/scripts/plot_vs_gnss.py <run>`.
+Skip `poseimu` and `odomimu` in the 3D panel: their timestamps don't match `/tf`. **RViz** (live, start it before the run): `rviz2 -d vio/ws/src/open_vins/ov_msckf/launch/display_ros2.rviz`.
 
-**6. Fix the scale (not pure VIO).** Keeps only OpenVINS's heading and moves at the logged speed:
-```bash
-python3 vio/scripts/rescale_path.py seg_a_undist
-```
-It writes `vio/results/seg_a_undist_corrected/trajectory.csv` and `plot.png`.
+## Results
 
-## Results so far
+**Runs kept** (`seg_c`, 122 s, true path 44 m; error = RMS distance to GNSS):
 
-**Runs kept** (`vio/results/`), `seg_c`, 122 s of driving, true path 44 m (GNSS). Error = RMS distance to GNSS.
+| Run | Settings | Path | Error | Foxglove |
+|---|---|---|---|---|
+| `seg_c_auto` | `noise_0.03_0.002` | 57 m | 2.5 m | yes |
+| `seg_c_noise_0.03` | `noise_0.03_0.002` | 54 m | 2.9 m | no |
+| `seg_c_highnoise_run2` | `high_imu_noise` | 63 m | 4.3 m | no |
 
-| Rank | Run folder | Settings | Path length | Error | Foxglove bag |
-|---|---|---|---|---|---|
-| 1 | `seg_c_auto` | `noise_0.03_0.002` | 57 m (1.28x) | 2.5 m | yes |
-| 2 | `seg_c_noise_0.03` | `noise_0.03_0.002` | 54 m (1.22x) | 2.9 m | no (pose only) |
-| 3 | `seg_c_highnoise_run2` | `high_imu_noise` | 63 m (1.42x) | 4.3 m | no (pose only) |
+**Everything tried** (the other runs were deleted). The IMU noise setting matters most: it tells OpenVINS how much to trust the IMU, and the IMU here vibrates a lot.
 
-**All settings tried** (the other runs were deleted, the numbers stay here). Several runs agree within about ±1 m.
-
-| Settings folder | Path length | Error vs GNSS | Height drift |
+| IMU noise (accel / gyro) | Settings folder | Path | Error |
 |---|---|---|---|
-| `noise_0.03_0.002` (0.03 / 0.002, 3 runs) | **54 to 59 m (1.2 to 1.3x)** | **2.5 to 4.8 m** | under 1 m |
-| `high_imu_noise` (0.05 / 0.003, 3 runs) | 63 to 65 m (1.4 to 1.5x) | 4.3 to 4.9 m | under 1 m |
-| `noise_0.07_0.004` | 78 m (1.8x) | 9.2 m | under 1 m |
-| `higher_imu_noise` (0.1 / 0.005) | 544 m (12x) | 141 m | up to 24 m |
-| `baseline` (IMU noise too low) | 199 m (4.5x) | 31.8 m | up to 22 m |
-| `ground_corners` | 520 m (11.7x) | 87.3 m | down to -48 m |
+| 0.005 / 0.0004 (too low) | `baseline` | 199 m | 31.8 m |
+| **0.03 / 0.002** (3 runs) | `noise_0.03_0.002` | 54 to 59 m | 2.5 to 4.8 m |
+| 0.05 / 0.003 (3 runs) | `high_imu_noise` | 63 to 65 m | 4.3 to 4.9 m |
+| 0.07 / 0.004 | `noise_0.07_0.004` | 78 m | 9.2 m |
+| 0.1 / 0.005 (too high) | `higher_imu_noise` | 544 m | 141 m |
+| 0.05 / 0.003 + mask + more corners | `ground_corners` | 520 m | 87 m |
 
-`seg_a`, full drive, true path about 195 m:
+Runs of the same setting differ by about ±1 m, so 0.03 and 0.05 are not clearly different.
 
-| | Path length | Error vs GNSS |
-|---|---|---|
-| OpenVINS as it is | 5061 m | 802 m on average |
-| Scale fixed with the logged speed (step 6) | 177 m | 1.5 m average, 3.9 m worst |
-
-The scale-fixed path is **not pure VIO**: only OpenVINS's heading is used, and the gyro alone gives almost the same (1.6 m).
+**`seg_a`, full drive (about 195 m):** OpenVINS as it is gave 5061 m. Fixing the scale with the logged speed gave 177 m and 1.5 m error, but that keeps only OpenVINS's heading, so it is not pure VIO (the gyro alone gives 1.6 m). The `seg_a` run folders were deleted to save space; to redo it, run `vio/scripts/run_openvins.sh seg_a_undist` (about 10 minutes), then `python3 vio/scripts/rescale_path.py seg_a_undist`.
 
 ## Known problems
 
-| Problem | Detail |
-|---|---|
-| IMU noise | The IMU vibrates about 10 times more than its real acceleration. Setting the noise too low makes the path run away. |
-| Start-up | Starting while the vehicle already moves gave a wrong start (speed 0, wrong gyro bias). A parked start is much better. |
-| Scale | The vehicle drives at steady speed, so there is almost no acceleration to learn the scale from. |
-| Camera numbers | Estimated from the 1280x720 calibration, not a real calibration. |
-| Data hole | 591 to 823 s has only images. |
+- **IMU noise setting:** too low and the path runs away, too high and the scale is lost.
+- **Start-up:** starting while the vehicle already moves gave a wrong start (speed 0, wrong gyro bias). Start from a standstill.
+- **Scale:** the vehicle drives at a steady speed, so there is almost no acceleration to learn real-world scale from. This is probably why the path is still 1.2 to 1.3 times too long.
+- **Camera numbers** are estimated, not calibrated.
+- **Data hole:** 591 to 823 s has only images.
