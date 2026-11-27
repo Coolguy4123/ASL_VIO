@@ -73,13 +73,7 @@ Skip `poseimu` and `odomimu` in the 3D panel: their timestamps don't match `/tf`
 
 ## Results
 
-**Runs kept** (`seg_c`, 122 s, true path 44 m; error = RMS distance to GNSS):
-
-| Run | Settings | Path | Error | Foxglove |
-|---|---|---|---|---|
-| `seg_c_auto` | `noise_0.03_0.002` | 57 m | 2.5 m | yes |
-| `seg_c_noise_0.03` | `noise_0.03_0.002` | 54 m | 2.9 m | no |
-| `seg_c_highnoise_run2` | `high_imu_noise` | 63 m | 4.3 m | no |
+**Run kept: `seg_c_auto`** (the best one; the other runs were deleted). `seg_c`, 122 s, true path 44 m, settings `noise_0.03_0.002`: path 57 m (1.28 times too long), error 2.5 m RMS (average 2.0, worst 5.5), Foxglove bag included. The settings are written out in `config/openvins/README.md`.
 
 **Everything tried** (the other runs were deleted). The IMU noise setting matters most: it tells OpenVINS how much to trust the IMU, and the IMU here vibrates a lot.
 
