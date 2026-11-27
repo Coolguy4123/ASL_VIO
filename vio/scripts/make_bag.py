@@ -5,12 +5,12 @@ Turn the episode CSV logs + JPEG images into a ROS 2 bag that OpenVINS can play.
 Run it with the system Python after sourcing ROS 2 Humble (the project .venv has no ROS):
 
     source /opt/ros/humble/setup.bash
-    python3 vio/make_bag.py --start 30 --end 590 --out vio/bags/seg_a
+    python3 vio/scripts/make_bag.py --start 30 --end 590 --out vio/bags/seg_a
 
 For OpenVINS we also correct the image time and remove the lens distortion:
 
-    python3 vio/make_bag.py --start 30 --end 590 --out vio/bags/seg_a_undist \\
-        --image-time-shift -0.425 --undistort-with rgb_intrinsics_640x480.yaml
+    python3 vio/scripts/make_bag.py --start 30 --end 590 --out vio/bags/seg_a_undist \\
+        --image-time-shift -0.425 --undistort-with vio/config/camera/rgb_intrinsics_640x480.yaml
 
 Inputs  (made by DataPreprocess.ipynb):
     episode_2/imu_raw.csv   every IMU sample (100 Hz)

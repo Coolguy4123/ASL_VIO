@@ -19,7 +19,7 @@ cam0:
   # The images in vio/bags/*_undist were already corrected for lens distortion, so no distortion here.
   distortion_coeffs: [0.0, 0.0, 0.0, 0.0]
   distortion_model: radtan
-  # fu, fv, cu, cv: from rgb_intrinsics_640x480.yaml (estimated from the 1280x720 calibration)
+  # fu, fv, cu, cv: from vio/config/camera/rgb_intrinsics_640x480.yaml (estimated from the 1280x720 calibration)
   intrinsics: [655.9330489612261, 655.9258697577723, 337.0928053837008, 253.54286338098012]
   resolution: [640, 480]
   rostopic: /cam0/image_raw

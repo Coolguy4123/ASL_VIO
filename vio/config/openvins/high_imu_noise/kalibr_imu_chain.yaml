@@ -1,0 +1,40 @@
+%YAML:1.0
+
+# IMU settings for OpenVINS (episode_2).
+# Noise values come from our own measurements (Step 2 in DataPreprocess.ipynb) and are made a
+# bit LARGER than measured on purpose: the vehicle vibrates a lot while driving, so telling
+# OpenVINS to trust the IMU a little less is safer.
+imu0:
+  T_i_b:
+    - [1.0, 0.0, 0.0, 0.0]
+    - [0.0, 1.0, 0.0, 0.0]
+    - [0.0, 0.0, 1.0, 0.0]
+    - [0.0, 0.0, 0.0, 1.0]
+  accelerometer_noise_density: 5.0e-2   # [ m / s^2 / sqrt(Hz) ]   measured 0.001 - 0.003, inflated
+  accelerometer_random_walk: 3.0e-3     # [ m / s^3 / sqrt(Hz) ]   NOT measured (needs hours of still data): typical value
+  gyroscope_noise_density: 3.0e-3       # [ rad / s / sqrt(Hz) ]   measured ~0.0002, inflated
+  gyroscope_random_walk: 2.0e-5         # [ rad / s^2 / sqrt(Hz) ] NOT measured: typical value
+  rostopic: /imu0
+  time_offset: 0.0
+  update_rate: 100.0
+  model: "kalibr"
+  Tw:
+    - [ 1.0, 0.0, 0.0 ]
+    - [ 0.0, 1.0, 0.0 ]
+    - [ 0.0, 0.0, 1.0 ]
+  R_IMUtoGYRO:
+    - [ 1.0, 0.0, 0.0 ]
+    - [ 0.0, 1.0, 0.0 ]
+    - [ 0.0, 0.0, 1.0 ]
+  Ta:
+    - [ 1.0, 0.0, 0.0 ]
+    - [ 0.0, 1.0, 0.0 ]
+    - [ 0.0, 0.0, 1.0 ]
+  R_IMUtoACC:
+    - [ 1.0, 0.0, 0.0 ]
+    - [ 0.0, 1.0, 0.0 ]
+    - [ 0.0, 0.0, 1.0 ]
+  Tg:
+    - [ 0.0, 0.0, 0.0 ]
+    - [ 0.0, 0.0, 0.0 ]
+    - [ 0.0, 0.0, 0.0 ]

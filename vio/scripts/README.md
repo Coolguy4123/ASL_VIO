@@ -1,0 +1,12 @@
+# scripts
+
+Run all of them from the project folder (`ASL_VIO`). Each file starts with a comment that explains how to use it.
+
+| Script | What it does |
+|---|---|
+| `make_bag.py` | CSV logs + images -> ROS 2 bag (fixes image time, removes lens distortion) |
+| `run_openvins.sh` | Plays a bag through OpenVINS and saves the results |
+| `check_run.py` | Compares OpenVINS speed with the logged speed (should be 1.0) |
+| `make_ground_truth.py` | GNSS -> clean ground-truth csv |
+| `make_foxglove_bag.py` | Result bag + ground-truth path, to view in Foxglove |
+| `rescale_path.py` | Fixes the scale of a path using the logged speed (not pure VIO) |
